@@ -32,16 +32,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-        <key>com.apple.springboard.debugapplications</key>
-        <true/>
-        <key>get-task-allow</key>
-        <true/>
-        <key>proc_info-allow</key>
-        <true/>
-        <key>task_for_pid-allow</key>
-        <true/>
-        <key>run-unsigned-code</key>
-        <true/>
+		<key>com.apple.springboard.debugapplications</key>
+		<true/>
+		<key>get-task-allow</key>
+		<true/>
+		<key>proc_info-allow</key>
+		<true/>
+		<key>task_for_pid-allow</key>
+		<true/>
+		<key>run-unsigned-code</key>
+		<true/>
 </dict>
 </plist>
 
@@ -65,35 +65,35 @@ int g_pid = 0; // required in iOS 6 (read below)
 
 
 struct dyld_image_info *g_dii = NULL;
-int 	g_imageCount;
+int g_imageCount;
 
 vm_offset_t
 readProcessMemory (int pid, mach_vm_address_t addr, mach_vm_size_t *size)
 {
 	// Helper function to read process memory (a la Win32 API of same name)
-  	// To make it easier for inclusion elsewhere, it takes a pid, and
+	// To make it easier for inclusion elsewhere, it takes a pid, and
 	// does the task_for_pid by itself. Given that iOS invalidates task ports
 	// after use, it's actually a good idea, since we'd need to reget anyway
 
 	task_t	t;
 	task_for_pid(mach_task_self(),pid, &t);
-    vm_offset_t readMem;
+	vm_offset_t readMem;
 	
 	// Use vm_read, rather than mach_vm_read, since the latter is different
 	// in iOS.
 
-    kern_return_t kr = mach_vm_read(t,        // vm_map_t target_task,
-			                     addr,      // mach_vm_address_t address,
-			                     *size,     // mach_vm_size_t size
-			                     &readMem,  // vm_offset_t *data,
-			                     size);     // mach_msg_type_number_t *dataCnt
+	kern_return_t kr = mach_vm_read(t,        // vm_map_t target_task,
+								 addr,      // mach_vm_address_t address,
+								 *size,     // mach_vm_size_t size
+								 &readMem,  // vm_offset_t *data,
+								 size);     // mach_msg_type_number_t *dataCnt
 
-    if (kr) {
-        // DANG..
+	if (kr) {
+		// DANG..
 		fprintf(stderr, "size: %llu \n", *size);
-        fprintf (stderr, "Unable to read target task's memory @%p - kr 0x%x\n\n" , (void *)addr, kr);
-        return (vm_offset_t) NULL;
-    }
+		fprintf (stderr, "Unable to read target task's memory @%p - kr 0x%x\n\n" , (void *)addr, kr);
+		return (vm_offset_t) NULL;
+	}
 
 	return readMem;
 
@@ -102,15 +102,15 @@ readProcessMemory (int pid, mach_vm_address_t addr, mach_vm_size_t *size)
 void 
 findListOfBinaries(task_t t, mach_vm_address_t addr, int size)
 {
-    kern_return_t kr;
-    mach_vm_size_t dataCnt = size;
+	kern_return_t kr;
+	mach_vm_size_t dataCnt = size;
 
 	mach_vm_size_t readData = readProcessMemory(g_pid, addr, &dataCnt);
 
 	int machsig = 0xfeedface;
 
 	// Checking only 0xfeedfa is a simple way to catch both 64-bit (facf) and 32-bit (face) headers
-    // Machine endianness is automatically taken care of, too..
+	// Machine endianness is automatically taken care of, too..
 
 	if (readData && memcmp(readData + 1, ((unsigned char *) &machsig) + 1, 3) == 0) {
 		// This is a Mach header
@@ -226,16 +226,16 @@ const char *
 unparse_inheritance (vm_inherit_t i)
 {
   switch (i)
-    {
-    case VM_INHERIT_SHARE:
-      return "share";
-    case VM_INHERIT_COPY:
-      return "copy";
-    case VM_INHERIT_NONE:
-      return "none";
-    default:
-      return "???";
-    }
+	{
+	case VM_INHERIT_SHARE:
+	  return "share";
+	case VM_INHERIT_COPY:
+	  return "copy";
+	case VM_INHERIT_NONE:
+	  return "none";
+	default:
+	  return "???";
+	}
 }
 
 void
@@ -243,8 +243,8 @@ macosx_debug_regions (task_t task, mach_vm_address_t address, int max)
 {
 	kern_return_t kret;
 
-    mach_vm_address_t prev_address;
-    /* @TODO: warning - potential overflow here - gotta fix this.. */
+	mach_vm_address_t prev_address;
+	/* @TODO: warning - potential overflow here - gotta fix this.. */
 	vm_region_basic_info_data_t prev_info, info;
 	mach_vm_size_t size, prev_size;
 
@@ -256,12 +256,12 @@ macosx_debug_regions (task_t task, mach_vm_address_t address, int max)
 
 	count = VM_REGION_BASIC_INFO_COUNT_64;
 	kret = mach_vm_region (task, &address, &size, VM_REGION_BASIC_INFO,
-			 				(vm_region_info_t) &info, &count, &object_name);
+							(vm_region_info_t) &info, &count, &object_name);
 
 	if (kret != KERN_SUCCESS) {
 		printf ("mach_vm_region: Error %d - %s", kret, mach_error_string(kret));
 		return;
-    }
+	}
 	memcpy (&prev_info, &info, sizeof (vm_region_basic_info_data_t));
 	prev_address = address;
 	prev_size = size;
@@ -273,27 +273,27 @@ macosx_debug_regions (task_t task, mach_vm_address_t address, int max)
 
 		address = prev_address + prev_size;
 
-    	/* Check to see if address space has wrapped around. */
+		/* Check to see if address space has wrapped around. */
 		if (address == 0) { 
-        	print = done = 1;
+			print = done = 1;
 		}
 
-      	if (!done) {
-        	// Even on iOS, we use VM_REGION_BASIC_INFO_COUNT_64. This works.
+		if (!done) {
+			// Even on iOS, we use VM_REGION_BASIC_INFO_COUNT_64. This works.
 
 			count = VM_REGION_BASIC_INFO_COUNT_64;
 
 
 			kret = mach_vm_region (task, &address, &size, VM_REGION_BASIC_INFO,
-                 	      			(vm_region_info_t) &info, &count, &object_name);
+									(vm_region_info_t) &info, &count, &object_name);
 
-            if (kret != KERN_SUCCESS) {
+			if (kret != KERN_SUCCESS) {
 				/* iOS 6 workaround - attempt to reget the task port to avoiD */
 				/* "(ipc/send) invalid destination port" (1000003 or something) */
 				task_for_pid(mach_task_self(), g_pid, &task);
 		
 				kret = mach_vm_region (task, &address, &size, VM_REGION_BASIC_INFO,
-                              			(vm_region_info_t) &info, &count, &object_name);
+										(vm_region_info_t) &info, &count, &object_name);
 
 			}
 
@@ -301,9 +301,9 @@ macosx_debug_regions (task_t task, mach_vm_address_t address, int max)
 				fprintf (stderr, "mach_vm_region failed for address %p - Error: %x\n", (void *)address, (kret));
 				size = 0;
 				if (address >= 0x4000000) return;
-              	print = done = 1;
-            }
-        }
+				print = done = 1;
+			}
+		}
 
 		if (address != prev_address + prev_size)
 			print = 1;
@@ -321,7 +321,7 @@ macosx_debug_regions (task_t task, mach_vm_address_t address, int max)
 			if (num_printed == 0)
 				printf ("Region ");
 			else
-            	printf ("   ... ");
+				printf ("   ... ");
 
 		findListOfBinaries(task, prev_address, prev_size);
 
@@ -333,8 +333,8 @@ macosx_debug_regions (task_t task, mach_vm_address_t address, int max)
 		/* End Quick hack */
 
 		printf (" %p-%p [%d%s](%s/%s; %s, %s, %s) %s \n",
-            (void *)(prev_address),
-            (void *)(prev_address + prev_size),
+			(void *)(prev_address),
+			(void *)(prev_address + prev_size),
 			print_size,
 			print_size_unit,
 			protection_bits_to_rwx (prev_info.protection),
@@ -346,27 +346,27 @@ macosx_debug_regions (task_t task, mach_vm_address_t address, int max)
 		);
 
 		if (nsubregions > 1)
-            printf (" (%d sub-regions) \n", nsubregions);
+			printf (" (%d sub-regions) \n", nsubregions);
 
-          	prev_address = address;
-          	prev_size = size;
-          	memcpy (&prev_info, &info, sizeof (vm_region_basic_info_data_t));
-          	nsubregions = 1;
+			prev_address = address;
+			prev_size = size;
+			memcpy (&prev_info, &info, sizeof (vm_region_basic_info_data_t));
+			nsubregions = 1;
 
-          	num_printed++;
-        } else {
-          	prev_size += size;
-          	nsubregions++;
-        }
+			num_printed++;
+		} else {
+			prev_size += size;
+			nsubregions++;
+		}
 
-      	if ((max > 0) && (num_printed >= max)) {
+		if ((max > 0) && (num_printed >= max)) {
 			printf ("Max %d num_printed %d\n", max, num_printed);
 			done = 1;
 		}
 
-      	if (done)
-        	break;
-    }
+		if (done)
+			break;
+	}
 }
 
 int 
@@ -376,12 +376,12 @@ main(int argc, char **argv) {
 	mach_port_t task;
 	mach_vm_address_t addr = 1;
 
- 	int pid = getpid();
-    if (argv[1]) { 
+	int pid = getpid();
+	if (argv[1]) { 
 		pid = atoi(argv[1]);
-    }
-    g_pid = pid;
- 	printf("PID: %d \n", pid);
+	}
+	g_pid = pid;
+	printf("PID: %d \n", pid);
 
 	kr = task_for_pid(mach_task_self(), pid, &task);
 	if (kr) { 
