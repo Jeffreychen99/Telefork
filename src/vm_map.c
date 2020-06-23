@@ -68,8 +68,7 @@ struct dyld_image_info *g_dii = NULL;
 int g_imageCount;
 
 vm_offset_t
-readProcessMemory (int pid, mach_vm_address_t addr, mach_vm_size_t *size)
-{
+readProcessMemory (int pid, mach_vm_address_t addr, mach_vm_size_t *size) {
 	// Helper function to read process memory (a la Win32 API of same name)
 	// To make it easier for inclusion elsewhere, it takes a pid, and
 	// does the task_for_pid by itself. Given that iOS invalidates task ports
@@ -77,7 +76,7 @@ readProcessMemory (int pid, mach_vm_address_t addr, mach_vm_size_t *size)
 
 	task_t	t;
 	task_for_pid(mach_task_self(),pid, &t);
-	vm_offset_t readMem;
+	vm_offset_t readMem = 0;
 	
 	// Use vm_read, rather than mach_vm_read, since the latter is different
 	// in iOS.
@@ -88,10 +87,10 @@ readProcessMemory (int pid, mach_vm_address_t addr, mach_vm_size_t *size)
 								 &readMem,  // vm_offset_t *data,
 								 size);     // mach_msg_type_number_t *dataCnt
 
-	if (kr) {
+	if (kr || readMem == 0) {
 		// DANG..
 		fprintf(stderr, "size: %llu \n", *size);
-		fprintf (stderr, "Unable to read target task's memory @%p - kr 0x%x\n\n" , (void *)addr, kr);
+		fprintf (stderr, "Unable to read target task's memory @ %p - kr 0x%x\n\n" , (void *)addr, kr);
 		return (vm_offset_t) NULL;
 	}
 
@@ -112,7 +111,7 @@ findListOfBinaries(task_t t, mach_vm_address_t addr, int size)
 	// Checking only 0xfeedfa is a simple way to catch both 64-bit (facf) and 32-bit (face) headers
 	// Machine endianness is automatically taken care of, too..
 
-	if (readData && memcmp(readData + 1, ((unsigned char *) &machsig) + 1, 3) == 0) {
+	if (readData && memcmp( (void *)(readData + 1), ((void *) &machsig) + 1, 3 ) == 0) {
 		// This is a Mach header
 		int i = 0;
 		
@@ -121,35 +120,35 @@ findListOfBinaries(task_t t, mach_vm_address_t addr, int size)
 		// but this would require my machlib.c (closed source) and really get the same result.
 		// This works because on both iOS and OS X dyld is at /usr/lib.
 
-		for (i = 0; i <dataCnt; i++) {
-			if (memcmp(readData+i, "lib/dyld", 8) == 0) {
+		for (i = 0; i < dataCnt; i++) {
+			if (memcmp( (void *)(readData + i), "lib/dyld", 8 ) == 0) {
 				unsigned int dyld_all_image_infos_offset ;
 				int imageCount = 0;
 
-				memcpy (&dyld_all_image_infos_offset, readData+DYLD_ALL_IMAGE_INFOS_OFFSET_OFFSET, sizeof (unsigned int));
+				memcpy (&dyld_all_image_infos_offset, 
+						(void *)(readData + DYLD_ALL_IMAGE_INFOS_OFFSET_OFFSET), 
+						sizeof (unsigned int) );
 
 			
-				 struct dyld_all_image_infos *dyldaii ;
+				 struct dyld_all_image_infos *dyldaii;
 				 // Safeguard: should check that dyld_all_image_infos_offset is < size..
 	
 				if (dyld_all_image_infos_offset > size) {
 					// This is to be expected, since the dyld_all_image_infos is in a data region
 
-					//printf ("Offset %x is greater than region size : %x\n", dyld_all_image_infos_offset, size);
+					printf ("Offset %x is greater than region size : %x\n", dyld_all_image_infos_offset, size);
 					dataCnt = sizeof(struct dyld_all_image_infos);
 					readData = readProcessMemory (g_pid, addr + dyld_all_image_infos_offset , &dataCnt);
 					
-					if (!readData) { return;}
+					if (!readData) { return; }
 					dyldaii = (struct dyld_all_image_infos *) readData;
 
-				}
-				else {
-					dyldaii = (struct dyld_all_image_infos *) (readData +dyld_all_image_infos_offset);
+				} else {
+					dyldaii = (struct dyld_all_image_infos *) (readData + dyld_all_image_infos_offset);
 				}
 	
 
-				printf ("Version: %d, %d images at offset %p\n",
-						dyldaii->version, dyldaii->infoArrayCount, dyldaii->infoArray);
+				printf ("Version: %d, %d images at offset %p\n", dyldaii->version, dyldaii->infoArrayCount, dyldaii->infoArray);
 
 				// Go to dyldaii->infoArray address
 	
@@ -157,20 +156,19 @@ findListOfBinaries(task_t t, mach_vm_address_t addr, int size)
 				dataCnt = imageCount * sizeof(struct dyld_image_info);
 				g_dii = (struct dyld_image_info *) malloc (dataCnt);
 				g_imageCount = imageCount;
-				readData = readProcessMemory(g_pid, dyldaii->infoArray, &dataCnt);
-				if (!readData) { return;}
+				readData = readProcessMemory(g_pid, (mach_vm_address_t)dyldaii->infoArray, &dataCnt);
+				if (!readData) { return; }
 
 				struct dyld_image_info *dii = (struct dyld_image_info *) readData;
 				
 				// We don't need i anymore, anyway
-				for (i = 0; i < imageCount; i++)
-					{
-						dataCnt = 1024;
-						mach_vm_size_t imageName = readProcessMemory (g_pid, dii[i].imageFilePath, &dataCnt);
-						if (imageName) g_dii[i].imageFilePath = strdup(imageName);
-						else g_dii[i].imageFilePath = NULL;
-						g_dii[i].imageLoadAddress = dii[i].imageLoadAddress;
-					}
+				for (i = 0; i < imageCount; i++) {
+					dataCnt = 1024;
+					mach_vm_size_t imageName = readProcessMemory (g_pid, (mach_vm_address_t)dii[i].imageFilePath, &dataCnt);
+					if (imageName) g_dii[i].imageFilePath = strdup((void *)imageName);
+					else g_dii[i].imageFilePath = NULL;
+					g_dii[i].imageLoadAddress = dii[i].imageLoadAddress;
+				}
 		
 				break;
 			}
@@ -294,7 +292,6 @@ macosx_debug_regions (task_t task, mach_vm_address_t address, int max)
 		
 				kret = mach_vm_region (task, &address, &size, VM_REGION_BASIC_INFO,
 										(vm_region_info_t) &info, &count, &object_name);
-
 			}
 
 			if (kret != KERN_SUCCESS) {
@@ -392,15 +389,10 @@ main(int argc, char **argv) {
 
 	macosx_debug_regions(task, addr, 1000);
 
+	printf("G_IMAGECOUNT: %d \n", g_imageCount);
 	for (int i = 0; i < g_imageCount; i++) {
-		printf("Image: %s loaded @%p\n", g_dii[i].imageFilePath, g_dii[i].imageLoadAddress);
+		//printf("Image: %s loaded @%p\n", g_dii[i].imageFilePath, g_dii[i].imageLoadAddress);
 	}
-
-	printf("\n\n");
-	printf("SIZEOF: %lu | %lu | %lu \n", sizeof(vm_size_t), sizeof(vm_offset_t), sizeof(void *));
-	printf("SIZEOF: %lu | %lu | %lu \n", sizeof(mach_vm_size_t), sizeof(mach_vm_offset_t), sizeof(void *));
-	printf("SIZEOF: %lu | %lu | %lu \n", sizeof(mach_vm_address_t), sizeof(vm_address_t), sizeof(void *));
-	printf("SIZEOF: %lu | %lu | %lu \n", sizeof(vm_region_info_t), sizeof(vm_address_t), sizeof(void *));
 
 	return 0;
 }
