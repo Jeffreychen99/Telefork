@@ -26,24 +26,6 @@ struct thread_list_node {
 	struct thread_list_node *next;
 };
 
-struct thread_register_list *
-readRegisters() {
-	task_t port;
-	task_for_pid(mach_task_self(), getpid(), &port);
-
-	thread_act_port_array_t thread_list;
-
-	struct thread_register_list *threadRegList = malloc(sizeof(struct thread_register_list));
-	task_threads(port, &thread_list, &threadRegList->thread_count);
-
-	for (int i = 0; i < threadRegList->thread_count; i++) {
-		struct thread_list_node *thread_node = malloc(sizeof(struct thread_list_node));
-
-		thread_get_state(thread_list[i], i386_THREAD_STATE, thread_node->thread_state, 0);
-	}
-	return threadRegList;
-}
-
 struct TeleInfo {
 	int child_pid;
 	int fd;
