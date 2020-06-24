@@ -24,18 +24,6 @@ telereceive(int parent_fd) {
 	return teleInfo;
 }
 
-struct TeleInfo *
-telesend(int child_fd) {
-
-	void *process_state = sbrk(0);
-
-	struct TeleInfo *parentInfo = malloc(sizeof(struct TeleInfo)); 
-
-	struct TeleInfo *teleInfo;
-
-	return teleInfo;
-}
-
 void 
 telepad(int *socket_number, int server_port) {
 
@@ -84,10 +72,6 @@ telepad(int *socket_number, int server_port) {
 	    telereceive(0);
 	    close(client_socket_number);
 	}
-}
-
-struct TeleInfo *telefork() {
-	return NULL;
 }
 
 int main(int argc, char **argv) {
