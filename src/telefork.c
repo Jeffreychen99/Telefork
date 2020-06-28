@@ -44,16 +44,30 @@ read_memory() {
 
 
 
+int
+socket_setup(char *child_ip) {
+	int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in child_addr;
+	child_addr.sin_family = AF_INET;
+	child_addr.sin_addr.s_addr = inet_addr(child_ip);
+	child_addr.sin_port = 6969;
+	int success = connect(sock_fd, (struct sockaddr *)&child_addr, sizeof(child_addr));
+	printf("CONNECT: %d \n", success);
+
+	return sock_fd;
+}
 
 struct TeleInfo *
-telesend(char *child_ip) {
+telefork(char *child_ip) {
 
 	struct thread_register_list *p_registers;
 
 	// Fork to a frozen child to observe
 	int pid = fork();
 	if (pid == 0) {
-		wait(0);
+		//wait();
+		exit(0);
 	} else {
 		// Read child process's thread registers (these should actually be the entire TCB)
 		p_registers = read_registers(pid);
@@ -63,26 +77,29 @@ telesend(char *child_ip) {
 
 
 	// Create and bind socket to child machine's IP address
-	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	int sock_fd = socket_setup(child_ip);
 
-	struct sockaddr_in child_addr;
-	child_addr.sin_family = AF_INET;
-	child_addr.sin_addr.s_addr = inet_addr(child_ip);
-	child_addr.sin_port = 0;  // Any local port will do
-	bind(sockfd, (struct sockaddr *)&child_addr, sizeof(child_addr));
+	// Send the registers over to the child via the socket
+	char *test_string = "hello";
+	printf("GOT HERE: %s \n", test_string);
+	if (write(3, test_string, 5) == -1) {
+		printf("  -> ERROR\n");
+	} else {
+		printf("  -> SENT\n");
+	}
+
+	// Send the virtual memory mappings to the child via the socket
+
+	// Accept the teleInfo struct from the child via the socket
 
 
 	struct TeleInfo *parentInfo = malloc(sizeof(struct TeleInfo)); 
 	return parentInfo;
 }
 
-struct TeleInfo *
-telefork() {
-	return NULL;
-}
-
 int
 main() {
+	telefork("127.0.0.1");
 	return 0;
 }
 

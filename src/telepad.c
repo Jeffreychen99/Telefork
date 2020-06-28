@@ -18,63 +18,52 @@
 
 #include "tele.h"
 
-struct TeleInfo *
-telereceive(int parent_fd) {
-	struct TeleInfo *teleInfo = malloc(sizeof(struct TeleInfo)); 
+void 
+telereturn() {
+	printf("GOT HERE \n");
+}
+
+int
+socket_setup(char *ip) {
+	int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in addr;
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = inet_addr(ip);
+	addr.sin_port = 6969;
+	int success = bind(sock_fd, (struct sockaddr *)&addr, sizeof(addr));
+	printf("BIND: %d \n", success);
+
+	return sock_fd;
+}
+
+struct TeleInfo * 
+telepad(char *ip) {
+	// Set up socket and listen
+	int sock_fd = socket_setup(ip);
+	int success = listen(sock_fd, 100);
+	printf("LISTEN: %d \n", success);
+
+	// Accept any parents forking (lol)
+	struct sockaddr_in client_address;
+    size_t client_address_length = sizeof(client_address);
+	int client_socket_number = accept(sock_fd, (struct sockaddr *)&client_address, (socklen_t *)&client_address_length);
+	printf("CLIENT: %d \n\n", client_socket_number);
+    telereturn();
+    close(client_socket_number);
+
+    // Read in the data from the parent
+
+    // Create TeleInfo struct
+	struct TeleInfo *teleInfo = malloc(sizeof(struct TeleInfo));
+
 	return teleInfo;
 }
 
-void 
-telepad(int *socket_number, int server_port) {
 
-    struct sockaddr_in server_address, client_address;
-    size_t client_address_length = sizeof(client_address);
-    int client_socket_number;
-
-    *socket_number = socket(PF_INET, SOCK_STREAM, 0);
-    if (*socket_number == -1) {
-        perror("Failed to create a new socket");
-    	exit(errno);
-    }
-
-    int socket_option = 1;
-    if (setsockopt(*socket_number, SOL_SOCKET, SO_REUSEADDR, &socket_option, sizeof(socket_option)) == -1) {
-    	perror("Failed to set socket options");
-    	exit(errno);
-    }
-
-    memset(&server_address, 0, sizeof(server_address));
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(server_port);
-
-    if (bind(*socket_number, (struct sockaddr *) &server_address, sizeof(server_address)) == -1) {
-    	perror("Failed to bind on socket");
-    	exit(errno);
-    }
-
-    if (listen(*socket_number, 1024) == -1) {
-    	perror("Failed to listen on socket");
-    	exit(errno);
-    }
-
-    printf("Listening on port %d...\n", server_port);
-
-    while (1) {
-	    client_socket_number = accept(*socket_number, (struct sockaddr *) &client_address, (socklen_t *) &client_address_length);
-		if (client_socket_number < 0) {
-	  		perror("Error accepting socket");
-	  		continue;
-		}
-
-		printf("Accepted connection from %s on port %d\n", inet_ntoa(client_address.sin_addr), client_address.sin_port);
-	    
-	    telereceive(0);
-	    close(client_socket_number);
-	}
-}
 
 int main(int argc, char **argv) {
+	telepad("127.0.0.1");
 	return 0;
 }
 
