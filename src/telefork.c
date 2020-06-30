@@ -23,15 +23,22 @@ read_registers(int pid) {
 	task_t port;
 	task_for_pid(mach_task_self(), pid, &port);
 
-	thread_act_port_array_t thread_list;
+	thread_act_array_t thread_list;
 
 	struct thread_register_list *threadRegList = malloc(sizeof(struct thread_register_list));
-	task_threads(port, &thread_list, &threadRegList->thread_count);
+	kern_return_t kr = task_threads(port, &thread_list, &threadRegList->thread_count);
+	if (kr != 0) {
+		printf("Unable to get threads: kr = %x \n", kr);
+	}
 
 	for (int i = 0; i < threadRegList->thread_count; i++) {
 		struct thread_list_node *thread_node = malloc(sizeof(struct thread_list_node));
 
-		thread_get_state(thread_list[i], i386_THREAD_STATE, thread_node->thread_state, 0);
+		mach_msg_type_number_t thread_state_count = x86_THREAD_STATE64_COUNT;
+		kr = thread_get_state(thread_list[i], x86_THREAD_STATE64, (thread_state_t)&thread_node->state, &thread_state_count);
+		if (kr != 0) {
+			printf("Unable to get thread %d: kr = %x \n", i, kr);
+		}
 	}
 	return threadRegList;
 }
@@ -70,22 +77,22 @@ telefork(char *child_ip) {
 		exit(0);
 	} else {
 		// Read child process's thread registers (these should actually be the entire TCB)
+		pid = getpid();
 		p_registers = read_registers(pid);
 
 		// Set up virtual memory iterator (vm_map)
 	}
 
-
 	// Create and bind socket to child machine's IP address
 	int sock_fd = socket_setup(child_ip);
 
 	// Send the registers over to the child via the socket
-	char *test_string = "hello";
-	printf("GOT HERE: %s \n", test_string);
-	if (write(3, test_string, 5) == -1) {
-		printf("  -> ERROR\n");
-	} else {
-		printf("  -> SENT\n");
+	if (write(sock_fd, &p_registers->thread_count, sizeof(p_registers->thread_count)) == -1) {
+		printf("Error in sending threads \n");
+	}
+	printf("THREAD_COUNT: %d \n", p_registers->thread_count);
+	for (int i = 0; i < p_registers->thread_count; i++) {
+		printf("i: %d \n", i);
 	}
 
 	// Send the virtual memory mappings to the child via the socket

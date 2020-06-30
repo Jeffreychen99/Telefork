@@ -22,12 +22,14 @@ struct thread_register_list {
 };
 
 struct thread_list_node {
-	thread_state_t thread_state;
+	x86_thread_state64_t state;
 	struct thread_list_node *next;
 };
 
+
+
 struct TeleInfo {
-	int child_pid;
-	int fd;
+	int pid;
+	struct sockaddr addr;
 };
 
