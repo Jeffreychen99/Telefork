@@ -33,6 +33,9 @@ read_registers(int pid) {
 
 	for (int i = 0; i < threadRegList->thread_count; i++) {
 		struct thread_list_node *thread_node = malloc(sizeof(struct thread_list_node));
+		if (i == 0) {
+			threadRegList->start_node = thread_node;
+		}
 
 		mach_msg_type_number_t thread_state_count = x86_THREAD_STATE64_COUNT;
 		kr = thread_get_state(thread_list[i], x86_THREAD_STATE64, (thread_state_t)&thread_node->state, &thread_state_count);
@@ -59,8 +62,12 @@ socket_setup(char *child_ip) {
 	child_addr.sin_family = AF_INET;
 	child_addr.sin_addr.s_addr = inet_addr(child_ip);
 	child_addr.sin_port = 6969;
-	int success = connect(sock_fd, (struct sockaddr *)&child_addr, sizeof(child_addr));
-	printf("CONNECT: %d \n", success);
+	if (connect(sock_fd, (struct sockaddr *)&child_addr, sizeof(child_addr)) == 0) {
+		printf("Successfully connected socket %d to ip %s \n", sock_fd, child_ip);
+	} else {
+		printf("Error: could not bind to socket and address \n");
+		exit(1);
+	}
 
 	return sock_fd;
 }
@@ -88,11 +95,26 @@ telefork(char *child_ip) {
 
 	// Send the registers over to the child via the socket
 	if (write(sock_fd, &p_registers->thread_count, sizeof(p_registers->thread_count)) == -1) {
-		printf("Error in sending threads \n");
+		printf("Error in sending thread_count \n");
+		exit(1);
+	} else {
+		printf("  + Sent thread_count (%d) \n", p_registers->thread_count);
 	}
-	printf("THREAD_COUNT: %d \n", p_registers->thread_count);
+
+	char *buf = malloc(sizeof(x86_thread_state64_t));
+
+	struct thread_list_node *curr_node = p_registers->start_node;
 	for (int i = 0; i < p_registers->thread_count; i++) {
-		printf("i: %d \n", i);
+		if (write(sock_fd, &curr_node->state, sizeof(x86_thread_state64_t) + 100) == -1) {
+			printf("  - Error in sending x86_thread_state64_t of thread (%d) \n", i);
+			exit(1);
+		} else {
+			printf("  + Sent x86_thread_state64_t of thread (%d) \n", i);
+		}
+
+		if (i < p_registers->thread_count - 1) {
+			curr_node = curr_node->next;
+		}
 	}
 
 	// Send the virtual memory mappings to the child via the socket

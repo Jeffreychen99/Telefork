@@ -18,7 +18,7 @@
 
 struct thread_register_list {
 	struct thread_list_node *start_node;
-	mach_msg_type_number_t thread_count;
+	unsigned int thread_count;
 };
 
 struct thread_list_node {
