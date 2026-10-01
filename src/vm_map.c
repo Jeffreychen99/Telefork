@@ -99,8 +99,7 @@ readProcessMemory (int pid, mach_vm_address_t addr, mach_vm_size_t *size) {
 }
 
 void 
-findListOfBinaries(task_t t, mach_vm_address_t addr, int size)
-{
+findListOfBinaries(task_t t, mach_vm_address_t addr, int size) {
 	kern_return_t kr;
 	mach_vm_size_t dataCnt = size;
 
@@ -182,8 +181,7 @@ findListOfBinaries(task_t t, mach_vm_address_t addr, int size)
 
  /* End 03/08/13 */
 char *
-behavior_to_text (vm_behavior_t	b)
-{
+behavior_to_text (vm_behavior_t	b) {
 
   switch (b)
 	{
@@ -204,8 +202,7 @@ behavior_to_text (vm_behavior_t	b)
 
 }
 char *
-protection_bits_to_rwx (vm_prot_t p)
-{
+protection_bits_to_rwx (vm_prot_t p) {
 
   // previous version of this somehow lost the "p&", always returning rwx..
   static char returned[4];
@@ -221,8 +218,7 @@ protection_bits_to_rwx (vm_prot_t p)
 }
 
 const char *
-unparse_inheritance (vm_inherit_t i)
-{
+unparse_inheritance (vm_inherit_t i) {
   switch (i)
 	{
 	case VM_INHERIT_SHARE:
@@ -237,8 +233,7 @@ unparse_inheritance (vm_inherit_t i)
 }
 
 void
-macosx_debug_regions (task_t task, mach_vm_address_t address, int max)
-{
+macosx_debug_regions (task_t task, mach_vm_address_t address, int max) {
 	kern_return_t kret;
 
 	mach_vm_address_t prev_address;
@@ -391,7 +386,7 @@ main(int argc, char **argv) {
 
 	printf("G_IMAGECOUNT: %d \n", g_imageCount);
 	for (int i = 0; i < g_imageCount; i++) {
-		//printf("Image: %s loaded @%p\n", g_dii[i].imageFilePath, g_dii[i].imageLoadAddress);
+		printf("Image: %s loaded @%p\n", g_dii[i].imageFilePath, g_dii[i].imageLoadAddress);
 	}
 
 	return 0;
